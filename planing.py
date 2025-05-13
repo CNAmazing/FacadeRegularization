@@ -6,10 +6,11 @@ import numpy as np
 from typing import Literal
 import random
 from scipy.optimize import linear_sum_assignment
-
+import copy
 class Rectangles:
     def __init__(self,rectangles):
         self.rectangles=rectangles
+        self.min_Horizontal_Distance,self.min_Vertical_Distance=rectangle_min_distance(rectangles)
         self.boundaries = self.add_boundary()
     def add_boundary(self):
         x_min,y_min=math.inf,math.inf
@@ -33,13 +34,13 @@ class Rectangles:
             y_min<y<y_max and
             y_min<y+h<y_max 
             ):
-            return False
+            return False 
         start1=(x,y)
         end1=(x+w,y+h)
         start2=(x+w,y)
         end2=(x,y+h)
-        flag1=not intersection_detection(start1,end1,self.rectangles)
-        flag2=not intersection_detection(start2,end2,self.rectangles)
+        flag1=not intersection_detection(start1,end1,self.rectangles,self.min_Horizontal_Distance,self.min_Vertical_Distance)
+        flag2=not intersection_detection(start2,end2,self.rectangles,self.min_Horizontal_Distance,self.min_Vertical_Distance)
         return flag1 and flag2
 
 
@@ -139,14 +140,17 @@ def ray_intersection_detection(start,end,rectangles,i,j):
            segments_intersect(start, end, C, D) or segments_intersect(start, end, D, A):
             return False
     return True 
-def intersection_detection(start,end,rectangles):
+def intersection_detection(start,end,rectangles,min_Horizontal_Distance=0,min_Vertical_Distance=0):
+    """
+    有相交或重叠的矩形返回True，否则返回False
+    """
     for rect in rectangles:
       
         x1, y1, w, h = rect
-        # x1=x1-10
-        # y1=y1-10
-        # w=w+20
-        # h=h+20
+        x1=x1-min_Horizontal_Distance
+        y1=y1-min_Vertical_Distance
+        w=w+min_Horizontal_Distance*2
+        h=h+min_Vertical_Distance*2
         # 计算矩形的四个顶点
         A = (x1, y1)
         B = (x1 + w, y1)
@@ -155,6 +159,14 @@ def intersection_detection(start,end,rectangles):
         # 检查线段是否与矩形相交
         if segments_intersect(start, end, A, B) or segments_intersect(start, end, B, C) or \
            segments_intersect(start, end, C, D) or segments_intersect(start, end, D, A):
+            return True
+        
+         
+        if  (   x1 <= start[0]<=x1+w and
+                x1 <= end[0]<=x1+w and
+                y1 <= start[1]<=y1+h and
+                y1 <= end[1]<=y1+h 
+            ):
             return True
     return False 
 def rectangle_neiborhood(rectangles):
@@ -168,17 +180,51 @@ def rectangle_neiborhood(rectangles):
             if j == i:
                 continue
             rect2 = rectangles[j]
+            r_w,r_h=rect2[2],rect2[3]
             # 计算矩形的中心点
             start,end=get_StartAndEnd(rect1,rect2)
             # 计算向量
-            vec_ = tuple([end[0] - start[0], end[1] - start[1],w,h])
+            vec_ = tuple([end[0] - start[0], end[1] - start[1],r_w,r_h])
             # 检查射线是否与其他矩形相交
             if ray_intersection_detection(start,end,rectangles,i,j):
                 neighbor.append(j)
                 vectorGroup.append(tuple(vec_))
             
         relations.append((i, tuple(neighbor), tuple(vectorGroup))) 
-    return relations       
+    return relations  
+def  rectangle_min_distance(rectangles):
+    """
+    计算矩形之间的最小距离
+    :param rectangles: 矩形列表 [(x1, y1, w, h), ...]
+    :return: 最小距离
+    """
+    min_Horizontal_Distance = float('inf')
+    min_Vertical_Distance = float('inf')
+    for i in range(len(rectangles)):
+        for j in range(i + 1, len(rectangles)):
+            rect1 = rectangles[i]
+            rect2 = rectangles[j]
+            x1, y1, w1, h1 = rect1
+            x2, y2, w2, h2 = rect2
+            # 计算矩形的中心点
+            cx1 = x1 + w1 / 2
+            cy1 = y1 + h1 / 2
+            cx2 = x2 + w2 / 2
+            cy2 = y2 + h2 / 2
+            if cx1<=cx2 and abs(cx1-cx1)>max(w1,w2)/2:
+                min_Horizontal_Distance = min(min_Horizontal_Distance, cx2 - cx1-w1/2-w2/2)
+            elif cx1>cx2 and abs(cx1-cx2)>max(w1,w2)/2:
+                min_Horizontal_Distance = min(min_Horizontal_Distance, cx1 - cx2-w1/2-w2/2)
+            else :
+                continue
+
+            if cy1<=cy2 and abs(cy1-cy2)>max(h1,h2)/2: 
+                min_Vertical_Distance = min(min_Vertical_Distance, cy2 - cy1-h1/2-h2/2)
+            elif cy1>cy2 and abs(cy1-cy2)>max(h1,h2)/2:
+                min_Vertical_Distance = min(min_Vertical_Distance, cy1 - cy2-h1/2-h2/2)
+            else:
+                continue
+    return min_Horizontal_Distance, min_Vertical_Distance
 def segments_intersect(A, B, C, D):
     # Unpack points
     x1, y1 = A
@@ -245,12 +291,24 @@ def pairwise_L2_distance(A, B):
     v2= np.array(B)
     
     return  np.linalg.norm(v1 - v2)
-def L2_And_Size_distance(A, B):
+def L2_And_Size_distance(A, B,w1=0.5):
     """计算 A 和 B 之间的 L2 距离矩阵"""
     v1= np.array(A)
     v2= np.array(B)
     vector_error = np.linalg.norm(v1[:2] - v2[:2])
-    size_error = abs(v1[2]*v1[3] - v2[2]*v2[3])
+    # size_error = abs(v1[2]*v1[3] - v2[2]*v2[3])
+    size_error=np.linalg.norm(v1[2:] - v2[2:])
+    # error=np.linalg.norm(v1 - v2)
+    return  w1*vector_error + (1-w1)*size_error
+    return  error
+    # return  size_error*vector_errors
+def L2_And_Size_distance_single(A):
+    """计算 A 和 B 之间的 L2 距离矩阵"""
+    v1= np.array(A)
+    vector_error = np.linalg.norm(v1[:2])
+    size_error = abs(v1[2]*v1[3])
+    # error=np.linalg.norm(v1)
+    # return  error
     return  vector_error + size_error
 # 读取 JSON 文件
 data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
@@ -258,8 +316,9 @@ data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
 # 矩形表示: (x1, y1, w, h)
 rectangles = data['window']
 rectangles = xyxy_to_xywh(rectangles)
-rectangles=remove_random_element(rectangles,delete_count=2)
+rectangles=remove_random_element(rectangles,delete_count=4)
 relations = rectangle_neiborhood(rectangles)
+min_Horizontal_Distance, min_Vertical_Distance = rectangle_min_distance(rectangles)
 for r in relations:
     print(r)
     print("\n") 
@@ -283,24 +342,52 @@ for i in range(len(relations)):
                 cost_matrix[temp_i][temp_j]=L2_And_Size_distance(cur_Group[temp_i],tar_Group[temp_j])
         
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
-        error = cost_matrix[row_ind, col_ind].sum()
+        error1 = cost_matrix[row_ind, col_ind].sum()
+        if m>n:
+            all_rows = set(range(cost_matrix.shape[1]))
+            matched_rows = set(row_ind)
+            unmatched_rows = all_rows - matched_rows
+            for row_idx in unmatched_rows:
+                temp_error=L2_And_Size_distance_single(tar_Group[row_idx])
+                error1+=temp_error
+        elif n>m:
+            all_cols = set(range(cost_matrix.shape[0]))
+            matched_cols = set(col_ind)
+            unmatched_cols = all_cols - matched_cols
+            for col_idx in unmatched_cols:
+                temp_error=L2_And_Size_distance_single(tar_Group[col_idx])
+                error1+=temp_error
 
-        # cost_matrix_reverse=np.zeros((m,n))
-        # tar_Group_copy=np.array(tar_Group)
-        # tar_Group_copy[:,:1]=tar_Group_copy[:,:1]*(-1)
-        # for temp_i in range(m):
-        #     for temp_j in range(n):
-        #         cost_matrix_reverse[temp_i][temp_j]=L2_And_Size_distance(cur_Group[temp_i],tar_Group_copy[temp_j])
-        # row_ind, col_ind = linear_sum_assignment(cost_matrix_reverse)
-        # error2= cost_matrix_reverse[row_ind, col_ind].sum()
-        # temp_vector_Group=None
-        temp_vector_Group=tar_Group
-        # if error1<error2:
-        #     error=error1
-        #     temp_vector_Group=tar_Group
-        # else:
-        #     error=error2
-        #     temp_vector_Group=tar_Group_copy
+        cost_matrix_reverse=np.zeros((m,n))
+        tar_Group_copy=np.array(tar_Group)
+        tar_Group_copy[:,:1]=tar_Group_copy[:,:1]*(-1)
+        for temp_i in range(m):
+            for temp_j in range(n):
+                cost_matrix_reverse[temp_i][temp_j]=L2_And_Size_distance(cur_Group[temp_i],tar_Group_copy[temp_j])
+        row_ind, col_ind = linear_sum_assignment(cost_matrix_reverse)
+        error2= cost_matrix_reverse[row_ind, col_ind].sum()
+        if m>n:
+            all_rows = set(range(cost_matrix.shape[1]))
+            matched_rows = set(row_ind)
+            unmatched_rows = all_rows - matched_rows
+            for row_idx in unmatched_rows:
+                temp_error=L2_And_Size_distance_single(tar_Group[row_idx])
+                error2+=temp_error
+        elif n>m:
+            all_cols = set(range(cost_matrix.shape[0]))
+            matched_cols = set(col_ind)
+            unmatched_cols = all_cols - matched_cols
+            for col_idx in unmatched_cols:
+                temp_error=L2_And_Size_distance_single(tar_Group[col_idx])
+                error2+=temp_error
+        temp_vector_Group=None
+        # temp_vector_Group=tar_Group
+        if error1<error2:
+            error=error1
+            temp_vector_Group=tar_Group
+        else:
+            error=error2
+            temp_vector_Group=tar_Group_copy
         
         if error < min_error:
             min_error = error
@@ -319,6 +406,32 @@ for i in range(len(relations)):
 before_len=len(rectangles)
 sorted_result = sorted(result, key=lambda x: x['min_error'])
 rectangles=rectangles.tolist()
+rectangles_copy=copy.deepcopy(rectangles)
+for s in sorted_result: 
+    rect=rectangles_copy[s['id']]
+    x,y,w,h=rect
+    centroid=(x+w/2,y+h/2)
+    min_vector_Group=s['min_vector_Group']
+    rect_box=Rectangles(rectangles_copy)
+    for g in min_vector_Group:
+        v=g[:2]
+        g_w,g_h=g[2:]
+        tar_centroid_x=centroid[0]+v[0]
+        tar_centroid_y=centroid[1]+v[1]
+        start=tuple([tar_centroid_x-g_w/2,tar_centroid_y-g_h/2])
+        end=tuple([tar_centroid_x+g_w/2,tar_centroid_y+g_h/2])
+        newRect=[start[0], start[1],g_w,g_h]
+        # if rect_box.is_Inside(newRect):
+        if 1:
+            print(f"当前索引对为{s['id']}和{s['neighbor']}")
+            
+            rectangles_copy.append(newRect)
+            rect_box.rectangles=rectangles_copy
+            print(f"已添加矩形{len(rectangles_copy)}")
+        # if not intersection_detection(start,end,rectangles):
+        #     rectangles.append([start[0], start[1], w, h]) 
+after_len=len(rectangles_copy)
+visualize_rectangles(rectangles_copy,before_len,after_len)
 
 for s in sorted_result: 
     rect=rectangles[s['id']]
@@ -335,8 +448,12 @@ for s in sorted_result:
         end=tuple([tar_centroid_x+g_w/2,tar_centroid_y+g_h/2])
         newRect=[start[0], start[1],g_w,g_h]
         if rect_box.is_Inside(newRect):
+        # if 1:
+            print(f"当前索引对为{s['id']}和{s['neighbor']}")
+            
             rectangles.append(newRect)
             rect_box.rectangles=rectangles
+            print(f"已添加矩形{len(rectangles)}")
         # if not intersection_detection(start,end,rectangles):
         #     rectangles.append([start[0], start[1], w, h]) 
 after_len=len(rectangles)
