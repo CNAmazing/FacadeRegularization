@@ -4,8 +4,8 @@ import numpy as np
 import json
 from sklearn.cluster import MeanShift
 import cvxpy as cp
-import mosek
-mosek.Env() 
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 def xyxy_to_xywh(bboxes):
     array=[]
     for bbox in bboxes:
@@ -234,6 +234,12 @@ def regularize(x, y, w, h, X, Y, W, H, alpha_x, alpha_y, alpha_w, alpha_h):
         return x_.value
     else:
         raise ValueError(f"求解失败，状态: {problem.status}")
+
+def get_center(rect):
+        x1, y1, w, h = rect
+        cx = x1 + w / 2
+        cy = y1 + h / 2
+        return cx, cy
 def main():
     # 初始化变量
     x: List[float] = []
@@ -261,11 +267,11 @@ def main():
     data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
 
     # 矩形表示: (x1, y1, w, h)
-    rectangles = data['window']
-    rectangles = xyxy_to_xywh(rectangles)
+    rect1 = data['window']
+    rect1 = xyxy_to_xywh(rect1)
     # 读取文件并解析数据
     # facade_list = read_file(in_path)
-    get_xywh(rectangles, x, y, w, h)
+    get_xywh(rect1, x, y, w, h)
 
     # 预聚类处理
     X = pre_cluster(x, delta_x)
@@ -274,14 +280,63 @@ def main():
     H = pre_cluster(h, delta_h)
 
 
-    alpha_x, alpha_y, alpha_w, alpha_h = 100, 100 ,1, 1
+    alpha_x, alpha_y, alpha_w, alpha_h = 1, 1 ,1, 1
     # 数据正则化
     r =regularize(x, y, w, h, X, Y, W, H, alpha_x, alpha_y, alpha_w, alpha_h)
     result= get_result(r, X, Y, W, H, len(x), len(X), len(Y), len(W), len(H))
-    for i in result:
-        print(i)
-    # write_file(X, Y, W, H, r, out_path)
-    print('Done')
-    return 0
+    rect2=result
+    
+    
+    # 创建画布
+    fig, ax = plt.subplots(figsize=(12, 10))
+
+
+    # 绘制rect1（蓝色边框+蓝色编号）
+    for i, rect in enumerate(rect1):
+        x1, y1, width, height = rect
+        rect_patch = patches.Rectangle(
+            (x1, y1), width, height, 
+            linewidth=1, edgecolor='blue', 
+            facecolor='none', linestyle='-'
+        )
+        ax.add_patch(rect_patch)
+        cx, cy = get_center(rect)
+        ax.text(cx, cy, f"1-{i}", fontsize=10, 
+                ha='center', va='center', color='blue')
+
+    # 绘制rect2（红色边框+红色编号）
+    for i, rect in enumerate(rect2):
+        x1, y1, width, height = rect
+        rect_patch = patches.Rectangle(
+            (x1, y1), width, height, 
+            linewidth=1, edgecolor='red', 
+            facecolor='none', linestyle='--'
+        )
+        ax.add_patch(rect_patch)
+        cx, cy = get_center(rect)
+        ax.text(cx, cy, f"2-{i}", fontsize=10, 
+                ha='center', va='center', color='red')
+
+    # 设置坐标轴等比例+显示网格
+    ax.set_aspect('equal')
+    ax.grid(True, linestyle=':', alpha=0.5)
+    plt.title('Rectangles Comparison (Blue: rect1, Red: rect2)')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+
+    # 自动调整坐标范围
+    all_rects = np.vstack([rect1, rect2])
+    x_margin = max(all_rects[:, 2]) * 0.2
+    y_margin = max(all_rects[:, 3]) * 0.2
+    ax.set_xlim([np.min(all_rects[:, 0]) - x_margin, 
+                np.max(all_rects[:, 0] + all_rects[:, 2]) + x_margin])
+    ax.set_ylim([np.min(all_rects[:, 1]) - y_margin, 
+                np.max(all_rects[:, 1] + all_rects[:, 3]) + y_margin])
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 if __name__ == "__main__":
     main()
