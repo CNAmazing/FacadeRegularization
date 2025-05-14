@@ -240,8 +240,14 @@ def get_center(rect):
         cx = x1 + w / 2
         cy = y1 + h / 2
         return cx, cy
-def main():
-    # 初始化变量
+def BIP(rectangles):
+    """
+    对矩形进行正则化处理
+    参数:
+        rectangles: 矩形列表，每个矩形格式为 (x, y, w, h)
+    返回:
+        处理后的矩形列表
+    """
     x: List[float] = []
     y: List[float] = []
     w: List[float] = []
@@ -250,47 +256,30 @@ def main():
     Y: List[float] = []
     W: List[float] = []
     H: List[float] = []
-    r: List[int] = []
-
-    # # 假设这些是全局变量或配置参数
-    # H2O_DATA_DIR = "/path/to/data/"  # 替换为实际路径
-    # IN_PATH = "input.txt"            # 输入文件名
-    # OUT_PATH = "output.txt"          # 输出文件名
     delta_x = 5                   # 聚类参数
     delta_y = 5
     delta_w = 3
     delta_h = 3
-
-    # # 拼接完整路径
-    # in_path = os.path.join(H2O_DATA_DIR, IN_PATH)
-    # out_path = os.path.join(H2O_DATA_DIR, OUT_PATH)
-    data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
-
-    # 矩形表示: (x1, y1, w, h)
-    rect1 = data['window']
-    rect1 = xyxy_to_xywh(rect1)
-    # 读取文件并解析数据
-    # facade_list = read_file(in_path)
-    get_xywh(rect1, x, y, w, h)
-
-    # 预聚类处理
+    # rectangles = xyxy_to_xywh(rectangles)
+    get_xywh(rectangles, x, y, w, h)
     X = pre_cluster(x, delta_x)
     Y = pre_cluster(y, delta_y)
     W = pre_cluster(w, delta_w)
     H = pre_cluster(h, delta_h)
-
-
     alpha_x, alpha_y, alpha_w, alpha_h = 1, 1 ,1, 1
-    # 数据正则化
     r =regularize(x, y, w, h, X, Y, W, H, alpha_x, alpha_y, alpha_w, alpha_h)
     result= get_result(r, X, Y, W, H, len(x), len(X), len(Y), len(W), len(H))
-    rect2=result
-    
+    return result
+def main():
+
+    data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
+    # 矩形表示: (x1, y1, w, h)
+    rect1 = data['window']
+    rect1 = xyxy_to_xywh(rect1)
+    rect2=BIP(rect1)
     
     # 创建画布
     fig, ax = plt.subplots(figsize=(12, 10))
-
-
     # 绘制rect1（蓝色边框+蓝色编号）
     for i, rect in enumerate(rect1):
         x1, y1, width, height = rect
