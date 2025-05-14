@@ -4,6 +4,7 @@ import cv2
 import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from T01_BIP import show_rectangles
 def get_center(rect):
         x1, y1, w, h = rect
         cx = x1 + w / 2
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     #     (420, 110, 490, 230, "rect"),  # Window 4 (misaligned)
     #     (100, 400, 180, 520, "arch"),  # Window 5 (different height)
     # ]
-    data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
+    data = read_json('data2.json')
     # 矩形表示: (x1, y1, w, h)
     detected_windows = data['window']
     detected_windows = xyxy_to_xywh(detected_windows)

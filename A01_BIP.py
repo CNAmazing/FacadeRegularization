@@ -240,45 +240,8 @@ def get_center(rect):
         cx = x1 + w / 2
         cy = y1 + h / 2
         return cx, cy
-def BIP(rectangles):
-    """
-    对矩形进行正则化处理
-    参数:
-        rectangles: 矩形列表，每个矩形格式为 (x, y, w, h)
-    返回:
-        处理后的矩形列表
-    """
-    x: List[float] = []
-    y: List[float] = []
-    w: List[float] = []
-    h: List[float] = []
-    X: List[float] = []
-    Y: List[float] = []
-    W: List[float] = []
-    H: List[float] = []
-    delta_x = 5                   # 聚类参数
-    delta_y = 5
-    delta_w = 3
-    delta_h = 3
-    # rectangles = xyxy_to_xywh(rectangles)
-    get_xywh(rectangles, x, y, w, h)
-    X = pre_cluster(x, delta_x)
-    Y = pre_cluster(y, delta_y)
-    W = pre_cluster(w, delta_w)
-    H = pre_cluster(h, delta_h)
-    alpha_x, alpha_y, alpha_w, alpha_h = 1, 1 ,1, 1
-    r =regularize(x, y, w, h, X, Y, W, H, alpha_x, alpha_y, alpha_w, alpha_h)
-    result= get_result(r, X, Y, W, H, len(x), len(X), len(Y), len(W), len(H))
-    return result
-def main():
-
-    data = read_json(r'E:\WorkSpace\FacadeRegularization\data2.json')
-    # 矩形表示: (x1, y1, w, h)
-    rect1 = data['window']
-    rect1 = xyxy_to_xywh(rect1)
-    rect2=BIP(rect1)
-    
-    # 创建画布
+def rectangle_compare(rect1, rect2):
+     # 创建画布
     fig, ax = plt.subplots(figsize=(12, 10))
     # 绘制rect1（蓝色边框+蓝色编号）
     for i, rect in enumerate(rect1):
@@ -324,7 +287,109 @@ def main():
 
     plt.tight_layout()
     plt.show()
+def show_rectangles(rect1,rect2):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
+    # 绘制rect1（蓝色色块+蓝色编号）
+    for i, rect in enumerate(rect1):
+        x1, y1, width, height = rect
+        rect_patch = patches.Rectangle(
+            (x1, y1), width, height,
+            linewidth=1, edgecolor='blue',
+            facecolor='lightblue', alpha=0.7,  # 使用浅蓝色填充
+            linestyle='-'
+        )
+        ax1.add_patch(rect_patch)
+        cx, cy = get_center(rect)
+        ax1.text(cx, cy, f"1-{i}", fontsize=10,
+                ha='center', va='center', color='darkblue')
+
+    # 绘制rect2（红色色块+红色编号）
+    for i, rect in enumerate(rect2):
+        x1, y1, width, height = rect
+        rect_patch = patches.Rectangle(
+            (x1, y1), width, height,
+            linewidth=1, edgecolor='red',
+            facecolor='lightcoral', alpha=0.7,  # 使用浅红色填充
+            linestyle='--'
+        )
+        ax2.add_patch(rect_patch)
+        cx, cy = get_center(rect)
+        ax2.text(cx, cy, f"2-{i}", fontsize=10,
+                ha='center', va='center', color='darkred')
+
+    # 设置子图1
+    ax1.set_aspect('equal')
+    ax1.grid(True, linestyle=':', alpha=0.5)
+    ax1.set_title('Rectangles Group 1 (Blue)')
+    ax1.set_xlabel('X Coordinate')
+    ax1.set_ylabel('Y Coordinate')
+
+    # 设置子图2
+    ax2.set_aspect('equal')
+    ax2.grid(True, linestyle=':', alpha=0.5)
+    ax2.set_title('Rectangles Group 2 (Red)')
+    ax2.set_xlabel('X Coordinate')
+    ax2.set_ylabel('Y Coordinate')
+
+    # 自动调整坐标范围
+    all_rects = np.vstack([rect1, rect2])
+    x_margin = max(all_rects[:, 2]) * 0.2
+    y_margin = max(all_rects[:, 3]) * 0.2
+
+    # 统一两个子图的坐标范围
+    xlim = [np.min(all_rects[:, 0]) - x_margin, 
+            np.max(all_rects[:, 0] + all_rects[:, 2]) + x_margin]
+    ylim = [np.min(all_rects[:, 1]) - y_margin, 
+            np.max(all_rects[:, 1] + all_rects[:, 3]) + y_margin]
+
+    ax1.set_xlim(xlim)
+    ax1.set_ylim(ylim)
+    ax2.set_xlim(xlim)
+    ax2.set_ylim(ylim)
+
+    plt.tight_layout()
+    plt.show()
+        
+def BIP(rectangles):
+    """
+    对矩形进行正则化处理
+    参数:
+        rectangles: 矩形列表，每个矩形格式为 (x, y, w, h)
+    返回:
+        处理后的矩形列表
+    """
+    x: List[float] = []
+    y: List[float] = []
+    w: List[float] = []
+    h: List[float] = []
+    X: List[float] = []
+    Y: List[float] = []
+    W: List[float] = []
+    H: List[float] = []
+    delta_x = 5                   # 聚类参数
+    delta_y = 5
+    delta_w = 3
+    delta_h = 3
+    # rectangles = xyxy_to_xywh(rectangles)
+    get_xywh(rectangles, x, y, w, h)
+    X = pre_cluster(x, delta_x)
+    Y = pre_cluster(y, delta_y)
+    W = pre_cluster(w, delta_w)
+    H = pre_cluster(h, delta_h)
+    alpha_x, alpha_y, alpha_w, alpha_h = 1, 1 ,1, 1
+    r =regularize(x, y, w, h, X, Y, W, H, alpha_x, alpha_y, alpha_w, alpha_h)
+    result= get_result(r, X, Y, W, H, len(x), len(X), len(Y), len(W), len(H))
+    return result
+def main():
+
+    data = read_json('data2.json')
+    # 矩形表示: (x1, y1, w, h)
+    rect1 = data['window']
+    rect1 = xyxy_to_xywh(rect1)
+    rect2=BIP(rect1)
+    rectangle_compare(rect1, rect2)
+   
 
 
 if __name__ == "__main__":
