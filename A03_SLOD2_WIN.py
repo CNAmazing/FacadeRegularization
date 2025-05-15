@@ -4,7 +4,7 @@ import cv2
 import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from T01_BIP import show_rectangles
+from A01_BIP import show_rectangles
 def get_center(rect):
         x1, y1, w, h = rect
         cx = x1 + w / 2
