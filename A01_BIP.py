@@ -36,6 +36,8 @@ def pre_cluster(x: list[float], delta: float) -> list[float]:
     返回:
         聚类中心列表X
     """
+    if not x:  # 如果 points 是空列表
+        return [], []
     # 将一维数据转为二维 [(x1,0), (x2,0), ...]
     points = np.array([[xi, 0] for xi in x])
     
