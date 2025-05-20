@@ -7,7 +7,6 @@ def generate_rectangle_grid(m, n, width_range, height_range, spacing_range=(10, 
     生成带有固定间距的矩形网格（尺寸放大100倍）
     每行之间的垂直间距固定（随机1-2种值）
     每列之间的水平间距固定（随机1-2种值）
-    
     参数:
         m: 行数
         n: 列数

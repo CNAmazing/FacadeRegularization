@@ -6,28 +6,10 @@ from matplotlib import pyplot as plt
 from A01_BIP import BIP
 from A03_SLOD2_WIN import SLOD2_WIN
 from A06 import ruleAlignment,ruleAlignment_Energy,ruleAlignment_EnergySingle
-from Atools import YOLO11
+from Atools import YOLO11,draw_detections,plt_show_image,pltShow
 import random
 
 
-
-
-def draw_detections( img, boxes):
-        for box in boxes:
-         x1, y1, w, h = box  
-        # 在图像上绘制边界框
-         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (0,0,255), 2)
- 
- 
-def plt_show_image(image):
-    plt.figure(figsize=(12, 6))
-    
-     
-    plt.imshow(image)
-
-    plt.axis('off')
-        
-    plt.show() 
 def cal_iou(bbox1, bbox2):
     inter_area = 0
     union_area=0
@@ -48,14 +30,7 @@ def cal_iou(bbox1, bbox2):
             # 计算 IoU
     iou = inter_area / union_area if union_area > 0 else 0
     return iou
-def pltShow(*args):
-    plt.figure(figsize=(12, 6))
-    lenth=len(args)
-    for i,image in enumerate(args) :
-        plt.subplot(1, lenth, i+1)
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-    plt.show()
+
 def get_jpg_paths(folder_name):
     """
     获取指定文件夹下images子目录中的所有.jpg图片路径及不带后缀的文件名
@@ -139,41 +114,41 @@ def  singleImageInference(image_path):
     print(f"iou_SWIN: {iou_SWIN:.4f}")
     print(f"iou_r: {iou_r:.4f}")
     print(f"iou_rE: {iou_rE:.4f}")
-    # pltShow(output_image, image_BIP, image_bbox_SWIN,image_r,image_rE)
+    pltShow(output_image, image_BIP, image_bbox_SWIN,image_r,image_rE)
     
     return iou_BIP,iou_SWIN,iou_r,iou_rE
 def main():
-    folder= r"E:\WorkSpace\FacadeRegularization\dataset\all"
-    jpg_paths, basenames = get_jpg_paths(folder)
-    # random.shuffle(jpg_paths)
-    BIP_iouScore=[]
-    SWIN_iouScore=[]
-    r_iouScore=[]
-    rE_iouScore=[]
-    for jpg_path in jpg_paths:
-        print(f"Processing {jpg_path}...")
-        iou_BIP,iou_SWIN,iou_r,iou_rE=singleImageInference(jpg_path)
+    # folder= r"E:\WorkSpace\FacadeRegularization\dataset\all"
+    # jpg_paths, basenames = get_jpg_paths(folder)
+    # # random.shuffle(jpg_paths)
+    # BIP_iouScore=[]
+    # SWIN_iouScore=[]
+    # r_iouScore=[]
+    # rE_iouScore=[]
+    # for jpg_path in jpg_paths:
+    #     print(f"Processing {jpg_path}...")
+    #     iou_BIP,iou_SWIN,iou_r,iou_rE=singleImageInference(jpg_path)
      
-        BIP_iouScore.append(iou_BIP)
-        SWIN_iouScore.append(iou_SWIN)
-        r_iouScore.append(iou_r)
-        rE_iouScore.append(iou_rE)
-    BIP_iouScore=np.array(BIP_iouScore)
-    SWIN_iouScore=np.array(SWIN_iouScore)
-    r_iouScore=np.array(r_iouScore)
-    rE_iouScore=np.array(rE_iouScore)
-    BIP_iouScore_mean = np.mean(BIP_iouScore)
-    SWIN_iouScore_mean = np.mean(SWIN_iouScore)
-    r_iouScore_mean = np.mean(r_iouScore)
-    rE_iouScore_mean = np.mean(rE_iouScore)
-    print(f"BIP_iouScore_mean: {BIP_iouScore_mean:.4f}")
-    print(f"SWIN_iouScore_mean: {SWIN_iouScore_mean:.4f}")
-    print(f"r_iouScore_mean: {r_iouScore_mean:.4f}")
-    print(f"rE_iouScore_mean: {rE_iouScore_mean:.4f}")
+    #     BIP_iouScore.append(iou_BIP)
+    #     SWIN_iouScore.append(iou_SWIN)
+    #     r_iouScore.append(iou_r)
+    #     rE_iouScore.append(iou_rE)
+    # BIP_iouScore=np.array(BIP_iouScore)
+    # SWIN_iouScore=np.array(SWIN_iouScore)
+    # r_iouScore=np.array(r_iouScore)
+    # rE_iouScore=np.array(rE_iouScore)
+    # BIP_iouScore_mean = np.mean(BIP_iouScore)
+    # SWIN_iouScore_mean = np.mean(SWIN_iouScore)
+    # r_iouScore_mean = np.mean(r_iouScore)
+    # rE_iouScore_mean = np.mean(rE_iouScore)
+    # print(f"BIP_iouScore_mean: {BIP_iouScore_mean:.4f}")
+    # print(f"SWIN_iouScore_mean: {SWIN_iouScore_mean:.4f}")
+    # print(f"r_iouScore_mean: {r_iouScore_mean:.4f}")
+    # print(f"rE_iouScore_mean: {rE_iouScore_mean:.4f}")
     '''
     单图像推理
     '''
-    # image_path = r"E:\WorkSpace\FacadeRegularization\dataset\all\00144.jpg"
-    # singleImageInference(image_path)
+    image_path = r"E:\WorkSpace\FacadeRegularization\dataset\poly3.jpg"
+    singleImageInference(image_path)
 if __name__ == "__main__":
    main()

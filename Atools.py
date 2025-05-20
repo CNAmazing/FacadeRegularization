@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import onnxruntime as ort
 from sklearn.cluster import MeanShift
-
+import matplotlib.pyplot as plt
 CLASS_NAMES = {
     0: 'window',   # 类别 0 名称
     1: 'balcony',   # 类别 1 名称
@@ -24,7 +24,6 @@ class YOLO11:
         self.input_image = input_image
         self.confidence_thres = confidence_thres
         self.iou_thres = iou_thres
- 
         # 加载类别名称
         self.classes = CLASS_NAMES
  
@@ -229,7 +228,7 @@ def pre_cluster(x: list[float], delta: float) -> list[float]:
     返回:
         聚类中心列表X
     """
-    if not x:  # 如果 points 是空列表
+    if len(x)<=0:  # 如果 points 是空列表
         return [], []
     # 将一维数据转为二维 [(x1,0), (x2,0), ...]
     points = np.array([[xi, 0] for xi in x])
@@ -242,3 +241,21 @@ def pre_cluster(x: list[float], delta: float) -> list[float]:
     X = [center[0] for center in ms.cluster_centers_]
     labels = ms.labels_.tolist()
     return X,labels
+def draw_detections( img, boxes):
+        for box in boxes:
+         x1, y1, w, h = box  
+        # 在图像上绘制边界框
+         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (0,0,255), 2)
+def plt_show_image(image):
+    plt.figure(figsize=(12, 6))
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show() 
+def pltShow(*args):
+    plt.figure(figsize=(12, 6))
+    lenth=len(args)
+    for i,image in enumerate(args) :
+        plt.subplot(1, lenth, i+1)
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+    plt.show()

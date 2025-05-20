@@ -3,7 +3,6 @@ import numpy as np
 import cv2
 from typing import Literal
 from Atools import YOLO11,pre_cluster
-import matplotlib.pyplot as plt
 
 
 def cal_iou_subtraction(bbox1, bbox2):
@@ -43,6 +42,7 @@ def x_error(data):
     total_sq_error_col1 = sq_error_col1.sum()  # 第1列平方误差和
     total_sq_error_col3 = sq_error_col3.sum()  # 第3列平方误差和
     return total_sq_error_col1+ total_sq_error_col3
+
 def y_error(data):
     # 计算第1列（索引0）和第3列（索引2）的均值
     col1_mean = data[:, 0].mean()  # 第1列均值
@@ -94,6 +94,8 @@ def Energy(variables,init, X_label,  Y_label,x_w_label, y_h_label,x_median,y_med
         errors = np.sqrt((temp[:,3] - y_h_median[i])** 2) 
         E+= errors.sum()
     return E
+
+
 
 def ruleAlignment_EnergySingle(boxes):
     x=[]
