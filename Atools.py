@@ -241,18 +241,18 @@ def pre_cluster(x: list[float], delta: float) -> list[float]:
     X = [center[0] for center in ms.cluster_centers_]
     labels = ms.labels_.tolist()
     return X,labels
-def draw_detections( img, boxes):
-        for box in boxes:
+def draw_detections( img, boxes,alpha=0.5):
+    for box in boxes:
          x1, y1, w, h = box  
         # 在图像上绘制边界框
-         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (0,0,255), 2)
+         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (0,0,200), -1)
 def plt_show_image(image):
     plt.figure(figsize=(12, 6))
     plt.imshow(image)
     plt.axis('off')
     plt.show() 
 def pltShow(*args):
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(16, 8))
     lenth=len(args)
     for i,image in enumerate(args) :
         plt.subplot(1, lenth, i+1)

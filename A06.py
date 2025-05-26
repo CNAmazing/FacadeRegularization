@@ -103,16 +103,17 @@ def ruleAlignment_EnergySingle(boxes):
     x_w=[]
     y_h=[]
     variables = []
+    delta=15
     for box in boxes:
         x.append(box[0])
         y.append(box[1])
         x_w.append(box[0]+box[2])
         y_h.append(box[1]+box[3])
         variables.extend([box[0], box[1], box[2], box[3]])
-    X,X_label= pre_cluster(x, delta=3)
-    Y,Y_label= pre_cluster(y, delta=3)
-    X_w,x_w_label= pre_cluster(x_w, delta=3)
-    Y_h,y_h_label= pre_cluster(y_h, delta=3)
+    X,X_label= pre_cluster(x, delta=delta)
+    Y,Y_label= pre_cluster(y, delta=delta)
+    X_w,x_w_label= pre_cluster(x_w, delta=delta)
+    Y_h,y_h_label= pre_cluster(y_h, delta=delta)
     boxes = np.array(boxes)
     X_label = np.array(X_label)
     Y_label = np.array(Y_label)

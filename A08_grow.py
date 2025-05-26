@@ -500,6 +500,19 @@ def boxes_classification(boxes,X_label,Y_label,x_w_label,y_h_label):
         # y_group.setdefault(key, []).append(boxes[i])
     
     return x_group,y_group
+def boxes_classification_HW(boxes,X_label,x_w_label,):
+    x_group={}
+   
+    for i,(x1,x2) in enumerate(zip(X_label,x_w_label)):
+        key=str(x1)+'_'+str(x2)
+        if key not in x_group:
+            x_group[key] = {
+                'boxes': [],  # 原来的列表换个名字存储
+                'vec': []    # 新的键值对
+            }
+        x_group[key]['boxes'].append(boxes[i])
+        # x_group.setdefault(key, []).append(boxes[i])
+    return x_group
 def add_relations(boxes,x_group):
     for key,value in x_group.items():
         cur_boxes=value['boxes']
@@ -551,7 +564,9 @@ def intersect_Boxes(boxes, newRect):
         if  is_rect_overlap(newRect,tar_box):
             return True
     return False
-def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,imageH,imageW,image):
+def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image):
+    imageH,imageW,_=image.shape
+
     for key,value in x_group.items():
             cur_boxes=value['boxes']
             vec_s= value['vec']
@@ -582,12 +597,12 @@ def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,imageH,imageW,image):
                     match trueCount:
                         case 0:
                             continue
-                        case _:
+                        case 2:
                             boxes=np.vstack((boxes, newRect))
                             draw_detections(image,boxes)
-                            pltShow(image)
+                            # pltShow(image)
     return boxes
-def cluster_completion(boxes,imageH,imageW,image):
+def cluster_completion(boxes,image):
     
     
     # X,X_label= pre_cluster(x, delta=3)
@@ -631,16 +646,57 @@ def cluster_completion(boxes,imageH,imageW,image):
         x_len,y_len,xw_len,yh_len=len(X),len(Y),len(X_w),len(Y_h)
 
         last_len=len(boxes)
-        print(f"before len{cur_len}")
-        boxes=generate_box(y_group,boxes,x_len,y_len,xw_len,yh_len,imageH,imageW,image)
-        boxes=generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,imageH,imageW,image)
-        
+        # print(f"before len{cur_len}")
+        boxes=generate_box(y_group,boxes,x_len,y_len,xw_len,yh_len,image)
+        boxes=generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image)
        
         cur_len=len(boxes)
-        print(f"after len{cur_len}")
+        # print(f"after len{cur_len}")
     return boxes
     
+def cluster_completion_HW(boxes,image):
+    cur_len=len(boxes)
+    last_len=0
+    while last_len<cur_len:
+        x=[]
+        y=[]
+        x_w=[]
+        y_h=[]
+        w=[]
+        h=[]
+        for box in boxes:
+            x.append(box[0])
+            y.append(box[1])
+            x_w.append(box[0]+box[2])
+            y_h.append(box[1]+box[3])
+            w.append(box[2])
+            h.append(box[3])
+        X,X_label= pre_cluster(x, delta=3)
+        Y,Y_label= pre_cluster(y, delta=3)
+        X_w,x_w_label= pre_cluster(x_w, delta=3)
+        Y_h,y_h_label= pre_cluster(y_h, delta=3)
+        W,W_label= pre_cluster(w, delta=3)
+        H,H_label= pre_cluster(h, delta=3)
 
+        boxes = np.array(boxes)
+        X_label = np.array(X_label)
+        Y_label = np.array(Y_label)
+        x_w_label = np.array(x_w_label)
+        y_h_label = np.array(y_h_label)
+        # x_group,y_group=boxes_classification(boxes,X_label,Y_label,x_w_label,y_h_label)
+        HW_group=boxes_classification_HW(boxes,W_label,H_label,)
+        add_relations(boxes,HW_group)
+        # add_relations(boxes,y_group)
+        x_len,y_len,xw_len,yh_len=len(X),len(Y),len(X_w),len(Y_h)
+
+        last_len=len(boxes)
+        # print(f"before len{cur_len}")
+        boxes=generate_box(HW_group,boxes,x_len,y_len,xw_len,yh_len,image)
+        # boxes=generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image)
+       
+        cur_len=len(boxes)
+        # print(f"after len{cur_len}")
+    return boxes
 def main():
     image_path = r"E:\WorkSpace\FacadeRegularization\dataset\poly3.jpg"
     image=  cv2.imread(image_path)

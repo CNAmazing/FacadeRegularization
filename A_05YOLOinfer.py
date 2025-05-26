@@ -7,6 +7,7 @@ from A01_BIP import BIP
 from A03_SLOD2_WIN import SLOD2_WIN
 from A06 import ruleAlignment,ruleAlignment_Energy,ruleAlignment_EnergySingle
 from Atools import YOLO11,draw_detections,plt_show_image,pltShow
+from A08_grow import cluster_completion,cluster_completion_HW
 import random
 
 
@@ -115,8 +116,43 @@ def  singleImageInference(image_path):
     print(f"iou_r: {iou_r:.4f}")
     print(f"iou_rE: {iou_rE:.4f}")
     pltShow(output_image, image_BIP, image_bbox_SWIN,image_r,image_rE)
-    
     return iou_BIP,iou_SWIN,iou_r,iou_rE
+def infer_completion_regularization(image_path):
+    image=  cv2.imread(image_path)
+    facade_detection = YOLO11(  onnx_model="checkpoint\YOLO_window.onnx",
+                                input_image=image_path,
+                                confidence_thres=0.5,
+                                iou_thres=0.25,
+                )
+    """
+    result={
+            'boxes':result_boxes,
+            'scores':result_scores,
+            'class_ids':result_class_ids
+            }
+    """
+    result,output_image = facade_detection.main()
+    boxes = result['boxes']
+    class_ids = result['class_ids']
+    bbox=[ ]
+    for i, box in enumerate(boxes):
+        if class_ids[i] == 0:
+            # 只处理类别为0的窗口
+            bbox.append(box)
+    
+    draw_detections(image, bbox)
+
+
+    image_com=image.copy()
+    com_boxes= cluster_completion_HW(bbox,image_com)
+    draw_detections(image_com, com_boxes)
+
+    regular_boxes= ruleAlignment_EnergySingle(com_boxes)
+    image_regular=image.copy()
+    draw_detections(image_regular, regular_boxes)
+    pltShow(image,image_com,image_regular)
+    # pltShow(image_com,)
+    # pltShow(image_regular)
 def main():
     # folder= r"E:\WorkSpace\FacadeRegularization\dataset\all"
     # jpg_paths, basenames = get_jpg_paths(folder)
@@ -148,7 +184,14 @@ def main():
     '''
     单图像推理
     '''
-    image_path = r"E:\WorkSpace\FacadeRegularization\dataset\poly3.jpg"
-    singleImageInference(image_path)
+    # image_path = r"E:\WorkSpace\FacadeRegularization\dataset\poly3.jpg"
+    # singleImageInference(image_path)
+
+
+    """
+    流程展示
+    """
+    image_path = r"E:\WorkSpace\FacadeRegularization\dataset\poly4.jpg"
+    infer_completion_regularization(image_path)
 if __name__ == "__main__":
    main()
