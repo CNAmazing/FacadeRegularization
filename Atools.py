@@ -3,12 +3,14 @@ import numpy as np
 import onnxruntime as ort
 from sklearn.cluster import MeanShift
 import matplotlib.pyplot as plt
+from datetime import datetime
 CLASS_NAMES = {
     0: 'window',   # 类别 0 名称
     1: 'balcony',   # 类别 1 名称
     2: 'door'    # 类别 1 名称
                         # 可以添加更多类别...
 }
+
 class YOLO11:
     """YOLO11 目标检测模型类，用于处理推理和可视化。"""
     def __init__(self, onnx_model, input_image, confidence_thres, iou_thres):
@@ -219,6 +221,78 @@ class YOLO11:
  
         # 对输出进行后处理以获取输出图像
         return self.postprocess(self.img, outputs)  # 输出图像
+
+class YOLO11_glass(YOLO11):
+    def __init__(self, onnx_model, input_image, confidence_thres, iou_thres):
+        super().__init__(onnx_model, input_image, confidence_thres, iou_thres)
+        self.color_palette= {0: 'glass', }
+        self.color_palette = np.random.uniform(0, 255, size=(len(self.classes), 3))
+    """YOLO11 目标检测模型类，用于处理推理和可视化。"""
+    def preprocess(self):
+        """
+        对输入图像进行预处理，以便进行推理。
+        返回：
+            image_data: 经过预处理的图像数据，准备进行推理。
+        """
+        self.img = self.input_image
+        # 获取输入图像的高度和宽度
+        self.img_height, self.img_width = self.input_image.shape[:2]
+ 
+        # 将图像颜色空间从 BGR 转换为 RGB
+        img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+ 
+        # 保持宽高比，进行 letterbox 填充, 使用模型要求的输入尺寸
+        img, self.ratio, (self.dw, self.dh) = self.letterbox(img, new_shape=(self.input_width, self.input_height))
+ 
+        # 通过除以 255.0 来归一化图像数据
+        image_data = np.array(img) / 255.0
+ 
+        # 将图像的通道维度移到第一维
+        image_data = np.transpose(image_data, (2, 0, 1))  # 通道优先
+ 
+        # 扩展图像数据的维度，以匹配模型输入的形状
+        image_data = np.expand_dims(image_data, axis=0).astype(np.float32)
+ 
+        # 返回预处理后的图像数据
+        return image_data
+ 
+    def letterbox(self, img, new_shape=(256, 256), color=(114, 114, 114), auto=False, scaleFill=False, scaleup=True):
+        """
+        将图像进行 letterbox 填充，保持纵横比不变，并缩放到指定尺寸。
+        """
+        shape = img.shape[:2]  # 当前图像的宽高
+        print(f"Original image shape: {shape}")
+ 
+        if isinstance(new_shape, int):
+            new_shape = (new_shape, new_shape)
+ 
+        # 计算缩放比例
+        r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])  # 选择宽高中最小的缩放比
+        if not scaleup:  # 仅缩小，不放大
+            r = min(r, 1.0)
+ 
+        # 缩放后的未填充尺寸
+        new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
+ 
+        # 计算需要的填充
+        dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # 计算填充的尺寸
+        dw /= 2  # padding 均分
+        dh /= 2
+ 
+        # 缩放图像
+        if shape[::-1] != new_unpad:  # 如果当前图像尺寸不等于 new_unpad，则缩放
+            img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+ 
+        # 为图像添加边框以达到目标尺寸
+        top, bottom = int(round(dh)), int(round(dh))
+        left, right = int(round(dw)), int(round(dw))
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
+        if img.shape[0] != new_shape[0] or img.shape[1] != new_shape[1]:
+            img = cv2.resize(img, new_shape, interpolation=cv2.INTER_LINEAR)
+        print(f"Final letterboxed image shape: {img.shape}")
+ 
+        return img, (r, r), (dw, dh)
+  
 def pre_cluster(x: list[float], delta: float) -> list[float]:
     """
     使用MeanShift对一维数据x进行聚类，返回聚类中心
@@ -241,11 +315,56 @@ def pre_cluster(x: list[float], delta: float) -> list[float]:
     X = [center[0] for center in ms.cluster_centers_]
     labels = ms.labels_.tolist()
     return X,labels
-def draw_detections( img, boxes,alpha=0.5):
+def draw_detections( img, boxes):
     for box in boxes:
          x1, y1, w, h = box  
         # 在图像上绘制边界框
-         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (0,0,200), -1)
+         cv2.rectangle(img, (round(x1), round(y1)), (round(x1 + w), round(y1 + h)), (0,0,200), -1)
+def draw_detections_by_wireframe( img, boxes,alpha=0.8,fillColor=(58, 78, 245), borderColor=(210, 20, 20)):
+    # for box in boxes:
+    #      x1, y1, w, h = box  
+    #     # 在图像上绘制边界框
+    #      cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (210,12,13), 2)
+    # 创建一个与原图相同大小的临时图像
+    
+    for box in boxes:
+        x1, y1, w, h = box
+        # 在 overlay 上绘制边界框（不透明度 100%）
+        # cv2.rectangle(overlay, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), (210, 12, 13), 2)
+        overlay = img.copy()
+
+        cv2.rectangle(overlay, (round(x1), round(y1)), (round(x1 + w), round(y1 + h)), fillColor, -1)
+        cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+
+        cv2.rectangle(img, (round(x1), round(y1)), (round(x1 + w), round(y1 + h)), borderColor, 1)
+
+    # 将 overlay 与原图按 alpha 比例混合
+    return img
+def boxes_classification_HW(boxes,X_label,x_w_label,):
+    x_group={}
+   
+    for i,(x1,x2) in enumerate(zip(X_label,x_w_label)):
+        key=str(x1)+'_'+str(x2)
+        if key not in x_group:
+            x_group[key] = {
+                'boxes': [],  # 原来的列表换个名字存储
+                'vec': []    # 新的键值对
+            }
+        x_group[key]['boxes'].append(boxes[i])
+        # x_group.setdefault(key, []).append(boxes[i])
+    return x_group
+def boxes_classification_HW_Get_idx(boxes,X_label,x_w_label,):
+    x_group={}
+   
+    for i,(x1,x2) in enumerate(zip(X_label,x_w_label)):
+        key=str(x1)+'_'+str(x2)
+        if key not in x_group:
+            x_group[key] = {
+                'id': [],  # 原来的列表换个名字存储
+            }
+        x_group[key]['id'].append(i)
+        # x_group.setdefault(key, []).append(boxes[i])
+    return x_group
 def plt_show_image(image):
     plt.figure(figsize=(12, 6))
     plt.imshow(image)
@@ -259,3 +378,8 @@ def pltShow(*args):
         plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         plt.axis('off')
     plt.show()
+def cvSave(*args):
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    for i , image in enumerate(args):
+        cv2.imwrite(f"{timestamp}_{i}.jpg", image)
+        print(f"Image {i} saved as {timestamp}_{i}.jpg")

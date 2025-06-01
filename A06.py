@@ -103,7 +103,7 @@ def ruleAlignment_EnergySingle(boxes):
     x_w=[]
     y_h=[]
     variables = []
-    delta=15
+    delta=5
     for box in boxes:
         x.append(box[0])
         y.append(box[1])
@@ -181,7 +181,7 @@ def ruleAlignment_EnergySingle(boxes):
                 x,
                 args=(variables.copy(),X_label,x_median,'X'),
                 constraints={'type': 'eq', 'fun': lambda x: X_eq @ x } if len(X_eq) > 0 else None,
-                method='SLSQP',
+                method='trust-constr',
                 options={'disp': True} # 显示优化过程
                 )
     result_y = minimize(
@@ -189,7 +189,7 @@ def ruleAlignment_EnergySingle(boxes):
                 y,
                 args=(variables.copy(),Y_label,y_median,'Y'),
                 constraints={'type': 'eq', 'fun': lambda y: Y_eq @ y } if len(Y_eq) > 0 else None,
-                method='SLSQP',
+                method='trust-constr',
                 options={'disp': True} # 显示优化过程
                 )
     result_x_w = minimize(
@@ -197,7 +197,7 @@ def ruleAlignment_EnergySingle(boxes):
                 x_w,
                 args=(variables.copy(),x_w_label,x_w_median,'XW'),
                 constraints={'type': 'eq', 'fun': lambda x_w: XW_eq @ x_w } if len(XW_eq) > 0 else None,
-                method='SLSQP',
+                method='trust-constr',
                 options={'disp': True} # 显示优化过程
                 )
     result_y_h = minimize(
@@ -205,7 +205,7 @@ def ruleAlignment_EnergySingle(boxes):
                 y_h,
                 args=(variables.copy(),y_h_label,y_h_median,'YH'),
                 constraints={'type': 'eq', 'fun': lambda y_h: YH_eq @ y_h } if len(YH_eq) > 0 else None,
-                method='SLSQP',
+                method='trust-constr',
                 options={'disp': True} # 显示优化过程
                 )
     boxes=[]
@@ -215,6 +215,7 @@ def ruleAlignment_EnergySingle(boxes):
 def EnergySingle(variables,init, X_label,x_median,key:Literal['X','Y','XW','YH'], ):
     boxes = []
     init_boxes = np.array(init).reshape(-1, 4)
+
     E=0
     match key:
         case 'X':
@@ -277,8 +278,6 @@ def EnergySingle(variables,init, X_label,x_median,key:Literal['X','Y','XW','YH']
                 #    x_mean = np.median(temp[:, 0])
                 errors = np.sqrt((temp[:,3] - x_median[i])** 2) 
                 E+= errors.sum()
-           
-
     return E
 
 def ruleAlignment_Energy(boxes):
@@ -379,6 +378,7 @@ def cal_median(boxes, X_label, Y_label, x_w_label, y_h_label):
         y_h_median.append(np.median(temp[:, 3]))
     return x_median, y_median, x_w_median, y_h_median
 def ruleAlignment(boxes):
+    delta=3
     x=[]
     y=[]
     x_w=[]
@@ -390,10 +390,10 @@ def ruleAlignment(boxes):
         x_w.append(box[0]+box[2])
         y_h.append(box[1]+box[3])
         variables.extend([box[0], box[1], box[2], box[3]])
-    X,X_label= pre_cluster(x, delta=3)
-    Y,Y_label= pre_cluster(y, delta=3)
-    X_w,x_w_label= pre_cluster(x_w, delta=3)
-    Y_h,y_h_label= pre_cluster(y_h, delta=3)
+    X,X_label= pre_cluster(x, delta=delta)
+    Y,Y_label= pre_cluster(y, delta=delta)
+    X_w,x_w_label= pre_cluster(x_w, delta=delta)
+    Y_h,y_h_label= pre_cluster(y_h, delta=delta)
     boxes = np.array(boxes)
     X_label = np.array(X_label)
     Y_label = np.array(Y_label)

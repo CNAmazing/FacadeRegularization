@@ -7,7 +7,7 @@ from typing import Literal
 import random
 from scipy.optimize import linear_sum_assignment
 import copy
-from Atools import pre_cluster,YOLO11,plt_show_image,pltShow,draw_detections
+from Atools import pre_cluster,YOLO11,plt_show_image,pltShow,draw_detections,boxes_classification_HW
 import matplotlib.pyplot as plt
 import cv2
 from copy import deepcopy
@@ -500,19 +500,7 @@ def boxes_classification(boxes,X_label,Y_label,x_w_label,y_h_label):
         # y_group.setdefault(key, []).append(boxes[i])
     
     return x_group,y_group
-def boxes_classification_HW(boxes,X_label,x_w_label,):
-    x_group={}
-   
-    for i,(x1,x2) in enumerate(zip(X_label,x_w_label)):
-        key=str(x1)+'_'+str(x2)
-        if key not in x_group:
-            x_group[key] = {
-                'boxes': [],  # 原来的列表换个名字存储
-                'vec': []    # 新的键值对
-            }
-        x_group[key]['boxes'].append(boxes[i])
-        # x_group.setdefault(key, []).append(boxes[i])
-    return x_group
+
 def add_relations(boxes,x_group):
     for key,value in x_group.items():
         cur_boxes=value['boxes']
@@ -564,7 +552,7 @@ def intersect_Boxes(boxes, newRect):
         if  is_rect_overlap(newRect,tar_box):
             return True
     return False
-def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image):
+def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image,delta):
     imageH,imageW,_=image.shape
 
     for key,value in x_group.items():
@@ -572,6 +560,8 @@ def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image):
             vec_s= value['vec']
             if len(cur_boxes)==1:
                 continue
+            # if random.random()<0.5:
+            #     cur_boxes=cur_boxes[::-1]  # 反转列表顺序
             for cur_box in cur_boxes:
                 for vec_ in vec_s:
                     newRect=[cur_box[0]+vec_[0], cur_box[1]+vec_[1],vec_[2],vec_[3]]
@@ -585,10 +575,10 @@ def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image):
                     newboxes_Y=newboxes[:,1]
                     newboxes_X_w=newboxes[:,0]+newboxes[:,2]
                     newboxes_Y_h=newboxes[:,1]+newboxes[:,3]
-                    new_X,new_X_label=pre_cluster(newboxes_X, delta=3)
-                    new_Y,new_Y_label=pre_cluster(newboxes_Y, delta=3)
-                    new_X_w,new_X_w_label=pre_cluster(newboxes_X_w, delta=3)
-                    new_Y_h,new_Y_h_label=pre_cluster(newboxes_Y_h, delta=3)
+                    new_X,new_X_label=pre_cluster(newboxes_X, delta=delta)
+                    new_Y,new_Y_label=pre_cluster(newboxes_Y, delta=delta)
+                    new_X_w,new_X_w_label=pre_cluster(newboxes_X_w, delta=delta)
+                    new_Y_h,new_Y_h_label=pre_cluster(newboxes_Y_h, delta=delta)
                     conditions=[
                         len(new_X)<=x_len and len(new_X_w)<=xw_len,
                         len(new_Y)<=y_len and len(new_Y_h)<=yh_len,
@@ -599,11 +589,11 @@ def generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image):
                             continue
                         case 2:
                             boxes=np.vstack((boxes, newRect))
-                            draw_detections(image,boxes)
+                            # draw_detections(image,boxes)
                             # pltShow(image)
     return boxes
 def cluster_completion(boxes,image):
-    
+    delta=3
     
     # X,X_label= pre_cluster(x, delta=3)
     # Y,Y_label= pre_cluster(y, delta=3)
@@ -630,10 +620,10 @@ def cluster_completion(boxes,image):
             y.append(box[1])
             x_w.append(box[0]+box[2])
             y_h.append(box[1]+box[3])
-        X,X_label= pre_cluster(x, delta=3)
-        Y,Y_label= pre_cluster(y, delta=3)
-        X_w,x_w_label= pre_cluster(x_w, delta=3)
-        Y_h,y_h_label= pre_cluster(y_h, delta=3)
+        X,X_label= pre_cluster(x, delta=delta)
+        Y,Y_label= pre_cluster(y, delta=delta)
+        X_w,x_w_label= pre_cluster(x_w, delta=delta)
+        Y_h,y_h_label= pre_cluster(y_h, delta=delta)
         boxes = np.array(boxes)
         X_label = np.array(X_label)
         Y_label = np.array(Y_label)
@@ -655,6 +645,7 @@ def cluster_completion(boxes,image):
     return boxes
     
 def cluster_completion_HW(boxes,image):
+    delta=5
     cur_len=len(boxes)
     last_len=0
     while last_len<cur_len:
@@ -671,12 +662,12 @@ def cluster_completion_HW(boxes,image):
             y_h.append(box[1]+box[3])
             w.append(box[2])
             h.append(box[3])
-        X,X_label= pre_cluster(x, delta=3)
-        Y,Y_label= pre_cluster(y, delta=3)
-        X_w,x_w_label= pre_cluster(x_w, delta=3)
-        Y_h,y_h_label= pre_cluster(y_h, delta=3)
-        W,W_label= pre_cluster(w, delta=3)
-        H,H_label= pre_cluster(h, delta=3)
+        X,X_label= pre_cluster(x, delta=delta)
+        Y,Y_label= pre_cluster(y, delta=delta)
+        X_w,x_w_label= pre_cluster(x_w, delta=delta)
+        Y_h,y_h_label= pre_cluster(y_h, delta=delta)
+        W,W_label= pre_cluster(w, delta=delta)
+        H,H_label= pre_cluster(h, delta=delta)
 
         boxes = np.array(boxes)
         X_label = np.array(X_label)
@@ -691,7 +682,7 @@ def cluster_completion_HW(boxes,image):
 
         last_len=len(boxes)
         # print(f"before len{cur_len}")
-        boxes=generate_box(HW_group,boxes,x_len,y_len,xw_len,yh_len,image)
+        boxes=generate_box(HW_group,boxes,x_len,y_len,xw_len,yh_len,image,delta)
         # boxes=generate_box(x_group,boxes,x_len,y_len,xw_len,yh_len,image)
        
         cur_len=len(boxes)
